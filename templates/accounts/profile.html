@@ -1,0 +1,226 @@
+{% extends 'base.html' %}
+
+{% block title %}Profile | Intraday Smart PDH/PDL{% endblock %}
+
+{% block content %}
+<section class="panel profile-shell">
+    <div class="profile-hero">
+        <div>
+            <h1>Trading Profile</h1>
+            <p class="muted">Configure SmartAPI access, risk controls, and intraday session schedule.</p>
+        </div>
+        <div class="profile-hero-actions">
+            <span class="chip wait">User: {{ request.user.username }}</span>
+            <a class="btn ghost" href="{% url 'trading:dashboard' %}">Back to Dashboard</a>
+        </div>
+    </div>
+
+    <div class="profile-grid">
+        <div class="profile-main">
+            <form method="post" enctype="multipart/form-data" class="form-grid profile-form">
+                {% csrf_token %}
+                {{ form.non_field_errors }}
+
+                <article class="card profile-card">
+                    <div class="section-headline">
+                        <h2>Profile Photo</h2>
+                        <p class="muted">Upload a clear face image for your account profile.</p>
+                    </div>
+                    <div class="profile-photo-editor">
+                        <div class="profile-photo-preview">
+                            {% if request.user.trading_profile.profile_photo %}
+                                <img src="{{ request.user.trading_profile.profile_photo.url }}" alt="Profile photo" />
+                            {% else %}
+                                <span>{{ request.user.username|first|upper }}</span>
+                            {% endif %}
+                        </div>
+                        <label>
+                            {{ form.profile_photo.label }}
+                            {{ form.profile_photo }}
+                            {{ form.profile_photo.errors }}
+                            <span class="muted tiny">Auto-resized to small passport size (210x270).</span>
+                        </label>
+                    </div>
+                </article>
+
+                <article class="card profile-card">
+                    <div class="section-headline">
+                        <h2>Broker Credentials</h2>
+                        <p class="muted">Use SmartAPI account details and Base32 TOTP secret.</p>
+                    </div>
+                    <div class="field-grid two-col">
+                        <label>
+                            {{ form.smart_api_key.label }}
+                            {{ form.smart_api_key }}
+                            {{ form.smart_api_key.errors }}
+                        </label>
+                        <label>
+                            {{ form.smart_client_code.label }}
+                            {{ form.smart_client_code }}
+                            {{ form.smart_client_code.errors }}
+                        </label>
+                        <label>
+                            {{ form.smart_pin.label }}
+                            {{ form.smart_pin }}
+                            {{ form.smart_pin.errors }}
+                        </label>
+                        <label>
+                            {{ form.smart_totp_secret.label }}
+                            {{ form.smart_totp_secret }}
+                            {{ form.smart_totp_secret.errors }}
+                            <span class="muted tiny">Paste setup key, not the rotating 6-digit OTP.</span>
+                        </label>
+                    </div>
+                </article>
+
+                <article class="card profile-card">
+                    <div class="section-headline">
+                        <h2>Risk Management</h2>
+                        <p class="muted">Position sizing and brokerage impact controls.</p>
+                    </div>
+                    <div class="field-grid two-col">
+                        <label>
+                            {{ form.capital.label }}
+                            {{ form.capital }}
+                            {{ form.capital.errors }}
+                        </label>
+                        <label>
+                            {{ form.risk_per_trade_percent.label }}
+                            {{ form.risk_per_trade_percent }}
+                            {{ form.risk_per_trade_percent.errors }}
+                        </label>
+                        <label>
+                            {{ form.min_risk_amount.label }}
+                            {{ form.min_risk_amount }}
+                            {{ form.min_risk_amount.errors }}
+                        </label>
+                        <label>
+                            {{ form.brokerage_per_trade.label }}
+                            {{ form.brokerage_per_trade }}
+                            {{ form.brokerage_per_trade.errors }}
+                        </label>
+                        <label>
+                            {{ form.entry_buffer_percent.label }}
+                            {{ form.entry_buffer_percent }}
+                            {{ form.entry_buffer_percent.errors }}
+                            <span class="muted tiny">Live entry buffer for ROBO limit orders (in %).</span>
+                        </label>
+                    </div>
+                </article>
+
+                <article class="card profile-card">
+                    <div class="section-headline">
+                        <h2>Trading Window & Security</h2>
+                        <p class="muted">Session timings, live mode, and app-level OTP login.</p>
+                    </div>
+                    <div class="field-grid two-col">
+                        <label>
+                            {{ form.trade_start_time.label }}
+                            {{ form.trade_start_time }}
+                            {{ form.trade_start_time.errors }}
+                        </label>
+                        <label>
+                            {{ form.trade_end_time.label }}
+                            {{ form.trade_end_time }}
+                            {{ form.trade_end_time.errors }}
+                        </label>
+                        <label>
+                            {{ form.exit_time.label }}
+                            {{ form.exit_time }}
+                            {{ form.exit_time.errors }}
+                        </label>
+                        <label class="switch-field">
+                            <span>{{ form.is_live_trading_enabled.label }}</span>
+                            {{ form.is_live_trading_enabled }}
+                            {{ form.is_live_trading_enabled.errors }}
+                        </label>
+                        <label class="switch-field">
+                            <span>{{ form.enable_app_totp_login.label }}</span>
+                            {{ form.enable_app_totp_login }}
+                            {{ form.enable_app_totp_login.errors }}
+                        </label>
+                        <label>
+                            {{ form.app_totp_secret.label }}
+                            {{ form.app_totp_secret }}
+                            {{ form.app_totp_secret.errors }}
+                        </label>
+                    </div>
+                </article>
+
+                <div class="profile-savebar">
+                    <button type="submit" class="btn">Save Trading Profile</button>
+                </div>
+            </form>
+        </div>
+
+        <aside class="profile-side">
+            <div class="card profile-card">
+                <h2>Real-Time OTP Monitor</h2>
+                <p class="muted">Refreshes every second for SmartAPI and app-login TOTP.</p>
+                <div class="otp-wrap">
+                    <div>
+                        <h3>SmartAPI TOTP</h3>
+                        <div id="smartTotp" class="otp-code">{{ smart_totp|default:"Not configured" }}</div>
+                    </div>
+                    <div>
+                        <h3>App Login TOTP</h3>
+                        <div id="appTotp" class="otp-code">{{ app_totp|default:"Not configured" }}</div>
+                    </div>
+                    <div>
+                        <h3>Expires In</h3>
+                        <div id="totpTimer" class="otp-code">{{ seconds_remaining }}s</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card profile-card">
+                <h2>Connection Check</h2>
+                <p class="muted">Validate broker login before starting the session.</p>
+                <button id="testSmartApi" class="btn mt-8" type="button">Test SmartAPI Login</button>
+                <p id="smartApiResult" class="mt-8 muted"></p>
+            </div>
+
+            <div class="card profile-card">
+                <h2>Quick Notes</h2>
+                <ul class="profile-notes">
+                    <li>Keep risk per trade near 1%–2% for consistent drawdown control.</li>
+                    <li>Use paper mode while validating new strategy settings.</li>
+                    <li>Ensure system time is synced for accurate TOTP generation.</li>
+                </ul>
+            </div>
+        </aside>
+    </div>
+</section>
+
+<script>
+    async function refreshTotp() {
+        try {
+            const res = await fetch("{% url 'accounts:totp_live' %}");
+            if (!res.ok) return;
+            const data = await res.json();
+            document.getElementById("smartTotp").textContent = data.smart_totp || "Not configured";
+            document.getElementById("appTotp").textContent = data.app_totp || "Not configured";
+            document.getElementById("totpTimer").textContent = `${data.seconds_remaining}s`;
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
+    setInterval(refreshTotp, 1000);
+
+    document.getElementById("testSmartApi").addEventListener("click", async () => {
+        const el = document.getElementById("smartApiResult");
+        el.textContent = "Testing connection...";
+
+        try {
+            const res = await fetch("{% url 'accounts:smartapi_test' %}");
+            const data = await res.json();
+            el.textContent = data.message;
+            el.className = data.success ? "mt-8 ok" : "mt-8 err";
+        } catch (err) {
+            el.textContent = "Connection test failed.";
+            el.className = "mt-8 err";
+        }
+    });
+</script>
+{% endblock %}

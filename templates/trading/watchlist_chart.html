@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}{{ selected_symbol.symbol }} Chart | Intraday Smart PDH/PDL{% endblock %}
+
+{% block content %}
+<section class="panel chart-shell">
+    <div class="chart-header">
+        <div>
+            <h1>{{ selected_symbol.symbol }} TradingView Chart</h1>
+            <p class="muted">Click any stock from watchlist to switch chart quickly.</p>
+        </div>
+        <a class="btn ghost" href="{% url 'trading:dashboard' %}">Back to Dashboard</a>
+    </div>
+
+    <div class="chart-layout">
+        <aside class="card chart-watchlist-card">
+            <h3>Watchlist</h3>
+            <div class="chart-watchlist-list">
+                {% for row in watchlist %}
+                    <a class="chart-watchlist-item {% if row.id == selected_symbol.id %}active{% endif %}" href="{% url 'trading:watchlist_chart' row.id %}">
+                        <span>{{ row.symbol }}</span>
+                        {% if row.enabled %}
+                            <span class="chip pass">ENABLED</span>
+                        {% else %}
+                            <span class="chip wait">DISABLED</span>
+                        {% endif %}
+                    </a>
+                {% empty %}
+                    <p class="muted">No watchlist stocks available.</p>
+                {% endfor %}
+            </div>
+        </aside>
+
+        <article class="card chart-main-card">
+            <div class="chart-meta">
+                <h2>{{ tradingview_symbol }}</h2>
+                <p class="muted">Token: {{ selected_symbol.token }} | Interval: 5 minutes</p>
+            </div>
+            <div id="tvChartContainer" class="tv-chart-canvas"></div>
+        </article>
+    </div>
+</section>
+
+<script src="https://s3.tradingview.com/tv.js"></script>
+<script>
+    if (window.TradingView) {
+        new TradingView.widget({
+            autosize: true,
+            symbol: "{{ tradingview_symbol|escapejs }}",
+            interval: "5",
+            timezone: "Asia/Kolkata",
+            theme: "light",
+            style: "1",
+            locale: "en",
+            toolbar_bg: "#f4f9ff",
+            enable_publishing: false,
+            withdateranges: true,
+            hide_top_toolbar: false,
+            save_image: false,
+            allow_symbol_change: false,
+            container_id: "tvChartContainer"
+        });
+    }
+</script>
+{% endblock %}

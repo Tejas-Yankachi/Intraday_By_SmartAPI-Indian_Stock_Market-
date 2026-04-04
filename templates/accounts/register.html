@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+
+{% block title %}Register | Intraday Smart PDH/PDL{% endblock %}
+
+{% block content %}
+<section class="auth-card">
+    <h1>Create Account</h1>
+    <p>Register your account to access the PDH/PDL trading dashboard and automation.</p>
+
+    <form method="post" class="form-grid">
+        {% csrf_token %}
+        {{ form.non_field_errors }}
+
+        <label>
+            Username
+            {{ form.username }}
+            {{ form.username.errors }}
+        </label>
+
+        <label>
+            Email
+            {{ form.email }}
+            {{ form.email.errors }}
+        </label>
+
+        <label>
+            Password
+            {{ form.password1 }}
+            {{ form.password1.errors }}
+        </label>
+
+        <label>
+            Confirm Password
+            {{ form.password2 }}
+            {{ form.password2.errors }}
+        </label>
+
+        <button type="submit" class="btn">Create Account</button>
+    </form>
+
+    <p class="mt-16">Already have an account? <a href="{% url 'accounts:login' %}">Login</a></p>
+</section>
+{% endblock %}

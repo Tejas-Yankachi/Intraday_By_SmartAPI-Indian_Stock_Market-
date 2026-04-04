@@ -1,0 +1,10 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h1>Strategy Results</h1>
+<ul>
+    {% for stock, result in results.items %}
+    <li>{{ stock }}: {{ result }}</li>
+    {% endfor %}
+</ul>
+{% endblock %}

@@ -1,0 +1,886 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard | Intraday Smart PDH/PDL{% endblock %}
+
+{% block content %}
+<section class="panel dashboard-shell">
+    <div class="dashboard-hero">
+        <div class="hero-copy">
+            <h1>Advanced PDH/PDL Dashboard</h1>
+            <p class="hero-subtitle">Previous-day high/low breakout with SmartAPI integration and deep risk controls.</p>
+            <p id="serverTime" class="hero-time">Server: --</p>
+        </div>
+        <div class="hero-actions actions">
+            <form method="post" action="{% url 'trading:start_session' %}">
+                {% csrf_token %}
+                <button class="btn" type="submit">Start Session</button>
+            </form>
+            <form method="post" action="{% url 'trading:stop_session' %}">
+                {% csrf_token %}
+                <button class="btn warn" type="submit">Stop Session</button>
+            </form>
+            <form method="post" action="{% url 'trading:emergency_exit' %}">
+                {% csrf_token %}
+                <button class="btn danger" type="submit">Emergency Exit</button>
+            </form>
+            <a class="btn ghost" href="{% url 'accounts:profile' %}">Settings</a>
+        </div>
+    </div>
+
+    <section class="section-block">
+        <article id="bullMarketCard" class="card bull-market-card" data-bias="{{ session_data.market_bias|default:'NEUTRAL' }}">
+            <div class="bull-market-copy">
+                <p class="section-eyebrow">Bull Market Pulse</p>
+                <h2>Momentum-first visuals for PDH and PDL execution.</h2>
+                <p class="muted">A premium trading surface built around higher highs, volume expansion, and disciplined trailing exits.</p>
+                <div class="bull-chip-row">
+                    <span class="bull-chip">Higher Highs</span>
+                    <span class="bull-chip">Volume Expansion</span>
+                    <span class="bull-chip">PDH / PDL Breakouts</span>
+                    <span class="bull-chip">Trailing Discipline</span>
+                </div>
+            </div>
+            <div class="bull-market-visual">
+                <div class="bull-pulse-pill">
+                    <span class="bull-pulse-dot" aria-hidden="true"></span>
+                    <span>Market Pulse</span>
+                    <strong id="bullBiasState">{{ session_data.market_bias|default:"NEUTRAL" }}</strong>
+                </div>
+                <div class="bull-score-grid">
+                    <div>
+                        <span>Session</span>
+                        <strong id="bullSessionState">{{ session_data.status|default:"IDLE" }}</strong>
+                    </div>
+                    <div>
+                        <span>Mode</span>
+                        <strong>PDH/PDL</strong>
+                    </div>
+                    <div>
+                        <span>Risk</span>
+                        <strong id="bullRiskState">Monitored</strong>
+                    </div>
+                </div>
+                <div class="bull-candles" aria-hidden="true">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </div>
+        </article>
+    </section>
+
+    <section class="section-block">
+        <div class="section-headline">
+            <h2>Live Indices</h2>
+            <p class="muted">Real-time benchmark view for broader market context.</p>
+        </div>
+        <div id="indicesBar" class="indices-bar">
+            <article class="index-tile">
+                <p class="index-name">NIFTY 50</p>
+                <p class="index-price">--</p>
+                <p class="index-time muted">Updating...</p>
+            </article>
+            <article class="index-tile">
+                <p class="index-name">BANK NIFTY</p>
+                <p class="index-price">--</p>
+                <p class="index-time muted">Updating...</p>
+            </article>
+            <article class="index-tile">
+                <p class="index-name">FIN NIFTY</p>
+                <p class="index-price">--</p>
+                <p class="index-time muted">Updating...</p>
+            </article>
+            <article class="index-tile">
+                <p class="index-name">MIDCAP SELECT</p>
+                <p class="index-price">--</p>
+                <p class="index-time muted">Updating...</p>
+            </article>
+        </div>
+    </section>
+
+    <section class="section-block">
+        <div class="section-headline">
+            <h2>NSE Watchlist</h2>
+            <p class="muted">Scanner and strategy entries run only on enabled stocks listed here.</p>
+        </div>
+        <div class="dashboard-grid watchlist-grid">
+            <article class="card">
+                <h3>Add NSE Stock</h3>
+                <form method="post" action="{% url 'trading:watchlist_add' %}" class="watchlist-form">
+                    {% csrf_token %}
+                    <div class="field-grid two-col">
+                        <label>
+                            NSE Symbol
+                            <input type="text" name="symbol" maxlength="32" placeholder="RELIANCE" required />
+                        </label>
+                        <label>
+                            Token (optional)
+                            <input type="text" name="token" maxlength="32" placeholder="Auto lookup if blank" />
+                        </label>
+                    </div>
+                    <p class="muted tiny">Token auto lookup uses SmartAPI. If lookup fails, enter token manually.</p>
+                    <button class="btn mini" type="submit">Add Stock</button>
+                </form>
+            </article>
+
+            <article class="card card-wide">
+                <h3>Configured Stocks</h3>
+                <div class="table-wrap watchlist-table-wrap">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Priority</th>
+                                <th>Symbol</th>
+                                <th>Token</th>
+                                <th>Exchange</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in watchlist %}
+                            <tr>
+                                <td>{{ row.priority }}</td>
+                                <td>
+                                    <a class="watchlist-symbol-link" href="{% url 'trading:watchlist_chart' row.id %}">
+                                        {{ row.symbol }}
+                                    </a>
+                                </td>
+                                <td>{{ row.token }}</td>
+                                <td>{{ row.exchange }}</td>
+                                <td>
+                                    {% if row.enabled %}
+                                        <span class="chip pass">ENABLED</span>
+                                    {% else %}
+                                        <span class="chip wait">DISABLED</span>
+                                    {% endif %}
+                                </td>
+                                <td class="watchlist-actions">
+                                    <a class="watchlist-chart-link" href="{% url 'trading:watchlist_chart' row.id %}">Chart</a>
+                                    <form method="post" action="{% url 'trading:watchlist_toggle' row.id %}">
+                                        {% csrf_token %}
+                                        <button class="btn mini" type="submit">
+                                            {% if row.enabled %}Disable{% else %}Enable{% endif %}
+                                        </button>
+                                    </form>
+                                    <form method="post" action="{% url 'trading:watchlist_remove' row.id %}">
+                                        {% csrf_token %}
+                                        <button class="btn mini danger" type="submit">Remove</button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="6" class="muted">No stocks added yet. Add NSE symbols to run the strategy.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </article>
+        </div>
+    </section>
+
+    <section class="section-block">
+        <div class="section-headline">
+            <h2>Performance Snapshot</h2>
+            <p class="muted">Live session and month-level outcomes.</p>
+        </div>
+        <div class="dashboard-grid metrics-grid">
+            <article class="card stat primary-metric">
+                <h3>Session Status</h3>
+                <div id="sessionStatus" class="metric">{{ session_data.status|default:"IDLE" }}</div>
+                <p id="marketBias" class="muted">Bias: {{ session_data.market_bias|default:"NEUTRAL" }}</p>
+            </article>
+            <article class="card stat primary-metric">
+                <h3>Session Win Rate</h3>
+                <div id="sessionWinRate" class="metric">{{ session_data.win_rate|default:0 }}%</div>
+                <p id="sessionTrades" class="muted">Trades: {{ session_data.total_trades|default:0 }}</p>
+            </article>
+            <article class="card stat primary-metric">
+                <h3>Month Win Rate</h3>
+                <div id="monthWinRate" class="metric">{{ month_data.win_rate }}%</div>
+                <p id="monthTrades" class="muted">{{ month_data.total_trades }} trades in {{ month_data.month }}</p>
+            </article>
+            <article class="card stat primary-metric">
+                <h3>Month Net P&L</h3>
+                <div id="monthPnl" class="metric">₹{{ month_data.net_pnl }}</div>
+                <p id="monthStreaks" class="muted">Win streak: {{ month_data.max_win_streak }} | Loss streak: {{ month_data.max_loss_streak }}</p>
+            </article>
+        </div>
+    </section>
+
+    <section class="section-block">
+        <div class="section-headline">
+            <h2>Live Connectivity & Risk</h2>
+            <p class="muted">Account identity, API health, funds, and strategy guardrails.</p>
+        </div>
+        <div class="dashboard-grid ops-grid">
+            <article class="card stat">
+                <h3>SmartAPI Connection</h3>
+                <div id="smartApiStatusPill" class="status-pill status-checking">
+                    <span class="status-dot" aria-hidden="true"></span>
+                    <span id="smartApiStatusLabel">CHECKING</span>
+                </div>
+                <p id="smartApiStatusMessage" class="muted mt-8">Validating broker API connection...</p>
+                <button id="smartApiRecheck" class="btn mini mt-8" type="button">Recheck</button>
+            </article>
+
+            <article class="card stat">
+                <h3>Market Context</h3>
+                <div id="marketBiasPill" class="status-pill status-checking">
+                    <span class="status-dot" aria-hidden="true"></span>
+                    <span id="marketBiasLabel">NEUTRAL</span>
+                </div>
+                <p id="niftyLivePrice" class="muted mt-8">Nifty: --</p>
+                <p id="breakoutWindowTimer" class="muted">Trade Window: --</p>
+            </article>
+
+            <article class="card stat">
+                <h3>Funds & Margin</h3>
+                <p id="fundTotal" class="muted">Total Funds: --</p>
+                <p id="fundAvailable" class="muted">Available: --</p>
+                <p id="fundUsed" class="muted">Utilized Margin: --</p>
+                <div class="progress-wrap">
+                    <div id="marginUsedFill" class="progress-fill" style="width:0%"></div>
+                </div>
+                <p id="marginUsedPercent" class="muted">Utilized: --</p>
+            </article>
+
+            <article class="card stat account-holder">
+                <h3>Account Holder</h3>
+                <p><strong id="holderName">{{ request.user.get_full_name|default:request.user.username }}</strong></p>
+                <p class="muted">Username: {{ request.user.username }}</p>
+                <p class="muted">Email: {{ request.user.email|default:"--" }}</p>
+                <p class="muted">Smart Client: <span id="smartClientCode">{{ profile.smart_client_code|default:"--" }}</span></p>
+                <p class="muted">Trading Mode: {% if profile.is_live_trading_enabled %}LIVE{% else %}PAPER{% endif %}</p>
+                <p id="brokerIdentity" class="muted">Broker: --</p>
+            </article>
+
+            <article class="card stat risk-card">
+                <h3>Risk Guardrails</h3>
+                <p id="riskPerTrade" class="muted">Per-trade Risk: --</p>
+                <p id="riskDailyLimit" class="muted">Daily Loss Limit: --</p>
+                <div class="progress-wrap">
+                    <div id="riskDailyFill" class="progress-fill" style="width:0%"></div>
+                </div>
+                <p id="riskWeeklyLimit" class="muted">Weekly Loss Limit: --</p>
+                <p id="riskTradeQuota" class="muted">Trade Quota: --</p>
+                <p id="riskStatus" class="chip wait mt-8">Monitoring</p>
+            </article>
+        </div>
+    </section>
+
+    <section class="section-block">
+        <div class="section-headline">
+            <h2>Active Trade Management</h2>
+            <p class="muted">Open positions, trailing state, and live log stream.</p>
+        </div>
+        <div class="dashboard-grid trading-grid">
+            <article class="card card-wide">
+                <h2>Open Trades</h2>
+                <div class="table-wrap">
+                    <table class="table" id="openTradesTable">
+                        <thead>
+                            <tr>
+                                <th>Symbol</th>
+                                <th>Direction</th>
+                                <th>Entry</th>
+                                <th>Current</th>
+                                <th>Unrealized</th>
+                                <th>SL</th>
+                                <th>Target</th>
+                                <th>Progress</th>
+                                <th>Trail Status</th>
+                                <th>Time In</th>
+                                <th>Exit In</th>
+                                <th>Qty</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for trade in open_trades %}
+                            <tr>
+                                <td>{{ trade.symbol }}</td>
+                                <td>{{ trade.direction }}</td>
+                                <td>{{ trade.entry_price }}</td>
+                                <td>--</td>
+                                <td>--</td>
+                                <td>{{ trade.stop_loss }}</td>
+                                <td>{{ trade.target_price }}</td>
+                                <td>--</td>
+                                <td>--</td>
+                                <td>--</td>
+                                <td>--</td>
+                                <td>{{ trade.quantity }}</td>
+                                <td>
+                                    <form method="post" action="{% url 'trading:close_trade' trade.id %}">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn mini">Close</button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="13" class="muted">No active positions.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </article>
+
+            <article class="card">
+                <h2>Live Strategy Log</h2>
+                <div id="logStream" class="log-stream">
+                    {% for row in recent_logs %}
+                        <p><strong>[{{ row.created_at|date:'H:i:s' }}]</strong> {{ row.level }} {% if row.symbol %}{{ row.symbol }}{% endif %} - {{ row.message }}</p>
+                    {% empty %}
+                        <p class="muted">No logs yet.</p>
+                    {% endfor %}
+                </div>
+            </article>
+        </div>
+    </section>
+
+    <section class="section-block">
+        <div class="section-headline">
+            <h2>Signal & PDH/PDL Scanner</h2>
+            <p class="muted">Breakout setup validation with filter pass/fail matrix.</p>
+        </div>
+        <div class="dashboard-grid two-col-layout">
+            <article class="card">
+                <h2>Signal Generation Dashboard</h2>
+                <div class="table-wrap">
+                    <table class="table" id="signalTable">
+                        <thead>
+                            <tr>
+                                <th>Symbol</th>
+                                <th>LTP</th>
+                                <th>Bid/Ask</th>
+                                <th>Signal</th>
+                                <th>Breakout</th>
+                                <th>PDL</th>
+                                <th>PDH</th>
+                                <th>Prev Close</th>
+                                <th>Gap Type</th>
+                                <th>Gap %</th>
+                                <th>Gap Status</th>
+                                <th>Action</th>
+                                <th>EMA Stack</th>
+                                <th>Volume x20</th>
+                                <th>ATR%</th>
+                                <th>15m Trend</th>
+                                <th>15m Strength</th>
+                                <th>15m Distance</th>
+                                <th>15m Slope</th>
+                                <th>Trend Status</th>
+                                <th>Bias</th>
+                                <th>Gap</th>
+                                <th>Window</th>
+                                <th>Time Left</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td colspan="24" class="muted">Loading PDH/PDL signals...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </article>
+
+            <article class="card">
+                <h2>PDH/PDL Levels</h2>
+                <div class="table-wrap">
+                    <table class="table" id="openingRangeTable">
+                        <thead>
+                            <tr>
+                                <th>Symbol</th>
+                                <th>PDH</th>
+                                <th>PDL</th>
+                                <th>Width</th>
+                                <th>Width %</th>
+                                <th>Breakout</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td colspan="6" class="muted">Loading previous-day levels...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </article>
+        </div>
+    </section>
+
+    <section class="section-block">
+        <div class="section-headline">
+            <h2>Performance Analytics</h2>
+            <p class="muted">Daily and symbol-level monthly traceback.</p>
+        </div>
+        <div class="dashboard-grid two-col-layout">
+            <article class="card">
+                <h2>Monthly Daily Traceback</h2>
+                <div class="table-wrap">
+                    <table class="table" id="dailyTraceTable">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Trades</th>
+                                <th>Wins</th>
+                                <th>Losses</th>
+                                <th>Win Rate</th>
+                                <th>Net P&L</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in month_data.daily_breakdown %}
+                            <tr>
+                                <td>{{ row.day }}</td>
+                                <td>{{ row.total }}</td>
+                                <td>{{ row.wins }}</td>
+                                <td>{{ row.losses }}</td>
+                                <td>{{ row.win_rate }}%</td>
+                                <td>₹{{ row.net_pnl }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="6" class="muted">No monthly trades yet.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </article>
+
+            <article class="card">
+                <h2>Monthly Symbol Traceback</h2>
+                <div class="table-wrap">
+                    <table class="table" id="symbolTraceTable">
+                        <thead>
+                            <tr>
+                                <th>Symbol</th>
+                                <th>Trades</th>
+                                <th>Wins</th>
+                                <th>Losses</th>
+                                <th>Win Rate</th>
+                                <th>Net P&L</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in month_data.symbol_breakdown %}
+                            <tr>
+                                <td>{{ row.symbol }}</td>
+                                <td>{{ row.total }}</td>
+                                <td>{{ row.wins }}</td>
+                                <td>{{ row.losses }}</td>
+                                <td>{{ row.win_rate }}%</td>
+                                <td>₹{{ row.net_pnl }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="6" class="muted">No symbol-level stats yet.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </article>
+        </div>
+    </section>
+
+    <section class="section-block">
+        <div class="section-headline">
+            <h2>Backend Execution Monitor</h2>
+            <p class="muted">Terminal-style view of sessions, open trades, PDH/PDL levels, and strategy logs.</p>
+        </div>
+        <article class="card card-wide terminal-card">
+            <pre id="backendExecutionOutput" class="terminal-output">Loading backend execution monitor...</pre>
+        </article>
+    </section>
+</section>
+
+<script>
+    function setSmartApiStatus(state, message) {
+        const pill = document.getElementById("smartApiStatusPill");
+        const label = document.getElementById("smartApiStatusLabel");
+        const msg = document.getElementById("smartApiStatusMessage");
+        const broker = document.getElementById("brokerIdentity");
+
+        if (!pill || !label || !msg) return;
+
+        pill.classList.remove("status-active", "status-inactive", "status-checking");
+        if (state === "ACTIVE") {
+            pill.classList.add("status-active");
+        } else if (state === "INACTIVE") {
+            pill.classList.add("status-inactive");
+        } else {
+            pill.classList.add("status-checking");
+        }
+
+        label.textContent = state;
+        msg.textContent = message || "";
+        if (broker) {
+            broker.textContent = message ? `Broker: ${message}` : "Broker: --";
+        }
+    }
+
+    function setMarketBias(bias) {
+        const pill = document.getElementById("marketBiasPill");
+        const label = document.getElementById("marketBiasLabel");
+        const bullCard = document.getElementById("bullMarketCard");
+        const bullBiasState = document.getElementById("bullBiasState");
+        if (!pill || !label) return;
+
+        pill.classList.remove("status-active", "status-inactive", "status-checking");
+        if (bias === "BULLISH") {
+            pill.classList.add("status-active");
+        } else if (bias === "BEARISH") {
+            pill.classList.add("status-inactive");
+        } else {
+            pill.classList.add("status-checking");
+        }
+        label.textContent = bias || "NEUTRAL";
+        if (bullCard) {
+            bullCard.dataset.bias = bias || "NEUTRAL";
+        }
+        if (bullBiasState) {
+            bullBiasState.textContent = bias || "NEUTRAL";
+        }
+    }
+
+    function renderChip(ok) {
+        return `<span class="chip ${ok ? "pass" : "fail"}">${ok ? "PASS" : "FAIL"}</span>`;
+    }
+
+    function renderSignalChip(signal) {
+        const safe = signal || "NO SIGNAL";
+        let cls = "signal-neutral";
+        if (safe === "LONG") cls = "signal-long";
+        if (safe === "SHORT") cls = "signal-short";
+        return `<span class="signal-badge ${cls}">${safe}</span>`;
+    }
+
+    function renderBreakoutChip(status) {
+        if (status === "ABOVE_PDH" || status === "ABOVE_ORH") return `<span class="chip pass">ABOVE PDH</span>`;
+        if (status === "BELOW_PDL" || status === "BELOW_ORL") return `<span class="chip fail">BELOW PDL</span>`;
+        if (status === "WAITING") return `<span class="chip wait">WAITING</span>`;
+        return `<span class="chip wait">${status || "N/A"}</span>`;
+    }
+
+    function renderGapStatus(status) {
+        if (status === "OK") return `<span class="chip pass">OK</span>`;
+        if (status === "MODERATE") return `<span class="chip wait">MODERATE</span>`;
+        if (status === "LARGE") return `<span class="chip fail">LARGE</span>`;
+        return `<span class="chip wait">${status || "UNKNOWN"}</span>`;
+    }
+
+    function renderTrendStatus(status) {
+        if (status === "PASS") return `<span class="chip pass">PASS</span>`;
+        if (status === "CAUTION") return `<span class="chip wait">CAUTION</span>`;
+        return `<span class="chip fail">FAIL</span>`;
+    }
+
+    function renderProgress(percent) {
+        const p = Number(percent || 0);
+        return `<div class="progress-wrap compact"><div class="progress-fill" style="width:${Math.max(0, Math.min(100, p))}%"></div></div><span class="muted">${p.toFixed(2)}%</span>`;
+    }
+
+    function asPrice(v) {
+        return v === null || v === undefined ? "--" : Number(v).toFixed(2);
+    }
+
+    function asMoney(v) {
+        if (v === null || v === undefined) return "--";
+        return `₹${Number(v).toFixed(2)}`;
+    }
+
+    function updateIndices(indices) {
+        const bar = document.getElementById("indicesBar");
+        if (!bar) return;
+
+        if (!indices || indices.length === 0) {
+            bar.innerHTML = `<article class="index-tile"><p class="index-name">Live Indices</p><p class="index-price">--</p><p class="index-time muted">No data</p></article>`;
+            return;
+        }
+
+        bar.innerHTML = indices.map((row) => `
+            <article class="index-tile">
+                <p class="index-name">${row.label || "--"}</p>
+                <p class="index-price">${asPrice(row.ltp)}</p>
+                <p class="index-time muted">Updated: ${row.updated_at || "--"}</p>
+            </article>
+        `).join("");
+    }
+
+    function updateFunds(funds) {
+        const total = funds?.total_funds;
+        const available = funds?.available_funds;
+        const utilized = funds?.utilized_margin;
+        const utilizedPercent = Number(funds?.margin_utilized_percent || 0);
+
+        document.getElementById("fundTotal").textContent = `Total Funds: ${asMoney(total)}`;
+        document.getElementById("fundAvailable").textContent = `Available: ${asMoney(available)}`;
+        document.getElementById("fundUsed").textContent = `Utilized Margin: ${asMoney(utilized)}`;
+        document.getElementById("marginUsedPercent").textContent = `Utilized: ${utilizedPercent.toFixed(2)}%`;
+
+        const fill = document.getElementById("marginUsedFill");
+        if (fill) {
+            fill.style.width = `${Math.max(0, Math.min(100, utilizedPercent))}%`;
+        }
+    }
+
+    function updateRisk(risk) {
+        if (!risk) return;
+
+        const perTrade = asMoney(risk.risk_per_trade_amount);
+        const dailyLimit = asMoney(risk.daily_loss_limit_amount);
+        const dailyUsed = asMoney(risk.today_loss_amount);
+        const weeklyLimit = asMoney(risk.weekly_loss_limit_amount);
+        const weeklyUsed = asMoney(risk.week_loss_amount);
+
+        document.getElementById("riskPerTrade").textContent = `Per-trade Risk: ${perTrade}`;
+        document.getElementById("riskDailyLimit").textContent = `Daily Loss Limit: ${dailyUsed} / ${dailyLimit}`;
+        document.getElementById("riskWeeklyLimit").textContent = `Weekly Loss Limit: ${weeklyUsed} / ${weeklyLimit}`;
+        document.getElementById("riskTradeQuota").textContent = `Trade Quota: ${risk.trades_taken_today}/${risk.max_trades_per_day} (left ${risk.trades_remaining})`;
+
+        const dailyUsePercent = Number(risk.daily_loss_used_percent || 0);
+        const dailyFill = document.getElementById("riskDailyFill");
+        if (dailyFill) {
+            dailyFill.style.width = `${Math.max(0, Math.min(100, dailyUsePercent))}%`;
+        }
+
+        const status = document.getElementById("riskStatus");
+        if (!status) return;
+
+        status.classList.remove("pass", "fail", "wait");
+        if (risk.block_new_entries) {
+            status.classList.add("fail");
+            status.textContent = "Guardrail Triggered";
+        } else if (dailyUsePercent >= 70) {
+            status.classList.add("wait");
+            status.textContent = "Caution: Loss Limit Near";
+        } else {
+            status.classList.add("pass");
+            status.textContent = "Within Risk Limits";
+        }
+    }
+
+    function updateBackendExecution(text) {
+        const output = document.getElementById("backendExecutionOutput");
+        if (!output) return;
+        output.textContent = text || "No backend execution data.";
+    }
+
+    function updateTable(tableId, rows, renderRow, emptyCols) {
+        const tbody = document.querySelector(`#${tableId} tbody`);
+        if (!tbody) return;
+
+        if (!rows || rows.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="${emptyCols}" class="muted">No data.</td></tr>`;
+            return;
+        }
+        tbody.innerHTML = rows.map(renderRow).join("");
+    }
+
+    function updateDashboard(data) {
+        document.getElementById("serverTime").textContent = `Server: ${data.server_time}`;
+
+        if (data.session) {
+            document.getElementById("sessionStatus").textContent = data.session.status;
+            document.getElementById("marketBias").textContent = `Bias: ${data.session.market_bias}`;
+            document.getElementById("sessionWinRate").textContent = `${data.session.win_rate}%`;
+            document.getElementById("sessionTrades").textContent = `Trades: ${data.session.total_trades}`;
+            const bullSessionState = document.getElementById("bullSessionState");
+            if (bullSessionState) {
+                bullSessionState.textContent = data.session.status;
+            }
+        } else {
+            document.getElementById("sessionStatus").textContent = "IDLE";
+            document.getElementById("marketBias").textContent = "Bias: NEUTRAL";
+            document.getElementById("sessionWinRate").textContent = "0%";
+            document.getElementById("sessionTrades").textContent = "Trades: 0";
+            const bullSessionState = document.getElementById("bullSessionState");
+            if (bullSessionState) {
+                bullSessionState.textContent = "IDLE";
+            }
+        }
+
+        if (data.api_connection) {
+            setSmartApiStatus(data.api_connection.status || "CHECKING", data.api_connection.message || "");
+        }
+
+        if (data.market_context) {
+            setMarketBias(data.market_context.market_bias || "NEUTRAL");
+            document.getElementById("niftyLivePrice").textContent = `Nifty: ${asPrice(data.market_context.nifty_ltp)}`;
+            document.getElementById("breakoutWindowTimer").textContent = `Trade Window: ${data.market_context.window_timer || "--"}`;
+        }
+
+        if (data.indices) {
+            updateIndices(data.indices);
+        }
+
+        if (data.funds) {
+            updateFunds(data.funds);
+        }
+
+        if (data.risk) {
+            updateRisk(data.risk);
+            const bullRiskState = document.getElementById("bullRiskState");
+            if (bullRiskState) {
+                bullRiskState.textContent = data.risk.block_new_entries ? "CAPPED" : "Monitored";
+            }
+        }
+
+        if (data.backend_execution !== undefined) {
+            updateBackendExecution(data.backend_execution);
+        }
+
+        if (data.month_traceback) {
+            const m = data.month_traceback;
+            document.getElementById("monthWinRate").textContent = `${m.win_rate}%`;
+            document.getElementById("monthTrades").textContent = `${m.total_trades} trades in ${m.month}`;
+            document.getElementById("monthPnl").textContent = `₹${m.net_pnl}`;
+            document.getElementById("monthStreaks").textContent = `Win streak: ${m.max_win_streak} | Loss streak: ${m.max_loss_streak}`;
+
+            updateTable(
+                "dailyTraceTable",
+                m.daily_breakdown,
+                (r) => `<tr><td>${r.day}</td><td>${r.total}</td><td>${r.wins}</td><td>${r.losses}</td><td>${r.win_rate}%</td><td>₹${r.net_pnl}</td></tr>`,
+                6
+            );
+
+            updateTable(
+                "symbolTraceTable",
+                m.symbol_breakdown,
+                (r) => `<tr><td>${r.symbol}</td><td>${r.total}</td><td>${r.wins}</td><td>${r.losses}</td><td>${r.win_rate}%</td><td>₹${r.net_pnl}</td></tr>`,
+                6
+            );
+        }
+
+        updateTable(
+            "signalTable",
+            data.signal_table || [],
+            (r) => `
+                <tr>
+                    <td>${r.symbol}</td>
+                    <td>${asPrice(r.ltp)}</td>
+                    <td>${asPrice(r.bid)} / ${asPrice(r.ask)}</td>
+                    <td>${renderSignalChip(r.signal)}</td>
+                    <td>${renderBreakoutChip(r.breakout_status)}</td>
+                    <td>${asPrice(r.pdl ?? r.or_low)}</td>
+                    <td>${asPrice(r.pdh ?? r.or_high)}</td>
+                    <td>${asPrice(r.previous_close)}</td>
+                    <td>${r.gap_type || "UNKNOWN"}</td>
+                    <td>${r.gap_percent === null || r.gap_percent === undefined ? "--" : `${asPrice(r.gap_percent)}%`}</td>
+                    <td>${renderGapStatus(r.gap_status)}</td>
+                    <td>${r.gap_action || "--"}</td>
+                    <td>${renderChip(r.filters?.ema_stack)}</td>
+                    <td>${asPrice(r.indicators?.volume_ratio)}x ${renderChip(r.filters?.volume)}</td>
+                    <td>${asPrice(r.indicators?.atr_percent)}% ${renderChip(r.filters?.atr)}</td>
+                    <td>${r.indicators?.trend_15m || "UNKNOWN"}</td>
+                    <td>${asPrice(r.indicators?.trend_strength)}%</td>
+                    <td>${asPrice(r.indicators?.trend_distance_percent)}%</td>
+                    <td>${asPrice(r.indicators?.trend_slope_percent)}%</td>
+                    <td>${renderTrendStatus(r.indicators?.trend_status || (r.filters?.trend_15m ? "PASS" : "FAIL"))}</td>
+                    <td>${renderChip(r.filters?.market_bias)}</td>
+                    <td>${renderChip(r.filters?.gap)}</td>
+                    <td>${renderChip(r.filters?.time_window)}</td>
+                    <td>${r.time_remaining || "--"}</td>
+                </tr>`,
+            24
+        );
+
+        updateTable(
+            "openingRangeTable",
+            data.opening_ranges || [],
+            (r) => `
+                <tr>
+                    <td>${r.symbol}</td>
+                    <td>${asPrice(r.pdh ?? r.opening_high)}</td>
+                    <td>${asPrice(r.pdl ?? r.opening_low)}</td>
+                    <td>${asPrice(r.range_points)}</td>
+                    <td>${asPrice(r.range_percent)}%</td>
+                    <td>${renderBreakoutChip(r.breakout_status)}</td>
+                </tr>`,
+            6
+        );
+
+        updateTable(
+            "openTradesTable",
+            data.open_trades || [],
+            (r) => `
+                <tr>
+                    <td>${r.symbol}</td>
+                    <td>${r.direction}</td>
+                    <td>${asPrice(r.entry_price)}</td>
+                    <td>${asPrice(r.current_price)}</td>
+                    <td>${asMoney(r.unrealized_pnl)} (${asPrice(r.unrealized_pnl_percent)}%)</td>
+                    <td>${asPrice(r.stop_loss)}</td>
+                    <td>${asPrice(r.target_price)}</td>
+                    <td>${renderProgress(r.target_progress_percent)}</td>
+                    <td>${r.trailing_status || "--"}</td>
+                    <td>${r.time_in_trade || "--"}</td>
+                    <td>${r.time_until_exit || "--"}</td>
+                    <td>${r.quantity}</td>
+                    <td><button class="btn mini" onclick="manualCloseTrade(${r.id})" type="button">Close</button></td>
+                </tr>`,
+            13
+        );
+
+        const stream = document.getElementById("logStream");
+        stream.innerHTML = (data.logs || []).map((l) => `<p><strong>[${l.time}]</strong> ${l.level} ${l.symbol || ""} - ${l.message}</p>`).join("") || "<p class='muted'>No logs yet.</p>";
+    }
+
+    async function pollDashboard() {
+        try {
+            const res = await fetch("{% url 'trading:dashboard_api' %}", { cache: "no-store" });
+            if (!res.ok) return;
+            const data = await res.json();
+            updateDashboard(data);
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
+    async function refreshSmartApiStatus() {
+        setSmartApiStatus("CHECKING", "Validating broker API connection...");
+        try {
+            const res = await fetch("{% url 'accounts:smartapi_test' %}", {
+                headers: { "X-Requested-With": "XMLHttpRequest" },
+                cache: "no-store",
+            });
+            if (!res.ok) {
+                throw new Error(`HTTP ${res.status}`);
+            }
+            const data = await res.json();
+            setSmartApiStatus(data.success ? "ACTIVE" : "INACTIVE", data.message || "");
+            await pollDashboard();
+        } catch (err) {
+            setSmartApiStatus("INACTIVE", "Unable to verify connection right now.");
+            console.error(err);
+        }
+    }
+
+    function getCookie(name) {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) return parts.pop().split(';').shift();
+        return "";
+    }
+
+    async function manualCloseTrade(tradeId) {
+        const csrftoken = getCookie("csrftoken");
+        const endpoint = `/dashboard/trade/${tradeId}/close/`;
+        try {
+            await fetch(endpoint, {
+                method: "POST",
+                headers: {
+                    "X-CSRFToken": csrftoken,
+                    "X-Requested-With": "XMLHttpRequest",
+                },
+            });
+            await pollDashboard();
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
+    document.getElementById("smartApiRecheck").addEventListener("click", refreshSmartApiStatus);
+    pollDashboard();
+    setInterval(pollDashboard, 5000);
+</script>
+{% endblock %}
