@@ -1,5 +1,5 @@
 
-# Intraday Smart ORB (Django + SmartAPI)
+# Intraday Smart PDH/PDL (Django + SmartAPI)
 
 Production-style Django project for a **5-minute Opening Range Breakout** strategy with:
 
