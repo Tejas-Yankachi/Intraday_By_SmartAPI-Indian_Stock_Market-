@@ -1,3 +1,4 @@
+
 # Intraday Smart ORB (Django + SmartAPI)
 
 Production-style Django project for a **5-minute Opening Range Breakout** strategy with:
@@ -68,3 +69,6 @@ It force-closes all open trades using latest fetched market price and journals t
 - Do not commit real SmartAPI keys, PIN, or TOTP secrets into source control.
 - Rotate keys if they were shared in chat/messages.
 - Consider field-level encryption for credentials before production deployment.
+
+# Intraday_By_SmartAPI
+
