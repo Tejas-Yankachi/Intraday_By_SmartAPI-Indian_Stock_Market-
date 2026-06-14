@@ -90,22 +90,10 @@ docker run -d -p 8000:8000 --env-file .env intraday-trader
 
 ## 📸 Project Screenshots
 
-<p align="center">
-  <img src="https://raw.githubusercontent.com/Tejas-Yankachi/Screenshots/main/Screenshot%20(285).png" width="45%">
-  <img src="https://raw.githubusercontent.com/Tejas-Yankachi/Screenshots/main/Screenshot%20(286).png" width="45%">
-</p>
+![Dashboard](https://raw.githubusercontent.com/Tejas-Yankachi/Screenshots/main/Screenshot-285.png)
 
-<p align="center">
-  <img src="https://raw.githubusercontent.com/Tejas-Yankachi/Screenshots/main/Screenshot%20(287).png" width="45%">
-  <img src="https://raw.githubusercontent.com/Tejas-Yankachi/Screenshots/main/Screenshot%20(288).png" width="45%">
-</p>
+![Dashboard](https://raw.githubusercontent.com/Tejas-Yankachi/Screenshots/main/Screenshot-286.png)
 
-<p align="center">
-  <img src="https://raw.githubusercontent.com/Tejas-Yankachi/Screenshots/main/Screenshot%20(289).png" width="45%">
-  <img src="https://raw.githubusercontent.com/Tejas-Yankachi/Screenshots/main/Screenshot%20(290).png" width="45%">
-</p>
+![Dashboard](https://raw.githubusercontent.com/Tejas-Yankachi/Screenshots/main/Screenshot-287.png)
 
-<p align="center">
-  <img src="https://raw.githubusercontent.com/Tejas-Yankachi/Screenshots/main/Screenshot%20(291).png" width="45%">
-  <img src="https://raw.githubusercontent.com/Tejas-Yankachi/Screenshots/main/Screenshot%20(292).png" width="45%">
-</p>
+![Dashboard](https://raw.githubusercontent.com/Tejas-Yankachi/Screenshots/main/Screenshot-288.png)
