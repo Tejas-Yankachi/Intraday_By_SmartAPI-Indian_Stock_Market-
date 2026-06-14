@@ -88,12 +88,4 @@ docker build -t intraday-trader .
 # Run container
 docker run -d -p 8000:8000 --env-file .env intraday-trader
 
-## 📸 Project Screenshots
 
-![Dashboard](https://raw.githubusercontent.com/Tejas-Yankachi/Screenshots/main/Screenshot-285.png)
-
-![Dashboard](https://raw.githubusercontent.com/Tejas-Yankachi/Screenshots/main/Screenshot-286.png)
-
-![Dashboard](https://raw.githubusercontent.com/Tejas-Yankachi/Screenshots/main/Screenshot-287.png)
-
-![Dashboard](https://raw.githubusercontent.com/Tejas-Yankachi/Screenshots/main/Screenshot-288.png)
